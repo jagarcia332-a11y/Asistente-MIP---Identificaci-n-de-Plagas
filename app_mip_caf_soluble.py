@@ -13,11 +13,17 @@ st.set_page_config(
 st.title("🪲 Asistente MIP - Identificación de Plagas")
 st.caption("Herramienta basada en Gemini para control de calidad e inocuidad alimentaria en Café Soluble")
 
-# Configuración de API Key de Gemini
-api_key = st.sidebar.text_input("Ingrese su Gemini API Key", type="password")
+# Intentar obtener la API Key desde los Secrets de Streamlit
+api_key = None
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+
+# Si no está configurada en los Secrets, solicitarla en la barra lateral
+if not api_key:
+    api_key = st.sidebar.text_input("Ingrese su Gemini API Key", type="password")
 
 if not api_key:
-    st.info("Por favor, ingrese su API Key en la barra lateral para activar el análisis con Gemini.", icon="🔑")
+    st.info("Por favor, contacte al administrador de Calidad para activar el acceso a la API.", icon="🔑")
     st.markdown("""
     ---
     ### ¿Cómo funciona esta herramienta?
@@ -105,22 +111,19 @@ if imagen_input:
             """
 
             try:
-                # 1. Obtener la lista de modelos activos en la cuenta del usuario
+                # Detección dinámica de modelos activos
                 modelos_activos = []
                 for m in client.models.list():
-                    # Filtrar solo modelos que soporten generación de contenido (multimodal)
                     nombre = m.name.replace("models/", "")
                     if "flash" in nombre or "pro" in nombre:
                         modelos_activos.append(nombre)
 
-                # Si por alguna razón la lista falla, dejamos un respaldo manual
                 if not modelos_activos:
                     modelos_activos = ["gemini-2.5-flash", "gemini-2.0-flash"]
 
                 exito = False
                 error_log = []
 
-                # 2. Intentar la consulta con el primer modelo válido encontrado
                 for mod_name in modelos_activos:
                     try:
                         response = client.models.generate_content(
